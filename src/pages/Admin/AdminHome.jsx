@@ -3,7 +3,8 @@ import NavbarNftConnected from '../../components/Navbar/NavbarNftConnected';
 import AdminLink from '../../components/AdminLink/AdminLink';
 import { useEffect, useState } from 'react';
 import { StakingFactory,StakingFactoryAbi } from '../../../contract/contract';
-import { useAddress, useContractRead, useContract,useContractWrite  } from "@thirdweb-dev/react"
+import { useAddress, useContractRead, useContract,useContractWrite,useContractEvents  } from "@thirdweb-dev/react"
+import axios from 'axios';
 
 const AdminHome = () => {
   const [href, setHref] = useState('')
@@ -15,6 +16,65 @@ const AdminHome = () => {
   const [timeUnit, setTimeUnit] = useState(10);
   const [rewardsPerUnitTime, setRewardsPerUnitTime] = useState(10);
   const [endDate, setEndDate] = useState(10);
+  const [image, setImage] = useState(null);
+  const [response, setResponse] = useState('');
+  const [responseMessage, setResponseMessage] = useState('');
+  const [imageChosen, setImageChosen] = useState(false);
+  const [website, setWebsite] = useState('www.');
+  const [twitter, setTwitter] = useState('');
+  const [stakingAddress, setstakingAddress] = useState('');
+  const [loading, setLoading] = useState(false);
+  const address = useAddress()
+console.log(address)
+  const handleFileChange = (event) => {
+    setImage(event.target.files[0]);
+    setImageChosen(true);
+  };
+
+  const handleUpload = () => {
+    event.preventDefault();
+    if (!image) {
+      console.log("Please select an image.");
+      
+      return
+    }
+
+    const formData = new FormData();
+    formData.append('image', image);
+
+    fetch('https://gaia-images.onrender.com/upload', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      setResponseMessage(data.imageUrl); // Assuming the server sends a JSON response with a 'message' field
+    })
+    .catch(error => {
+      console.error('Error occurred:', error);
+      // Handle error
+    });
+  };
+
+  const postData = async () => {
+    try {
+      const data = {
+        collectionName,
+        description,
+        responseMessage,
+        website,
+        twitter,
+        address,
+        stakingAddress
+      };
+
+      const response = await axios.post('https://gaia-database.onrender.com/api/gaia', data);
+      setResponse(response.data);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   const wei ='1'
 	// Scroll page
 	useEffect(() => {
@@ -37,6 +97,17 @@ const AdminHome = () => {
     "deployStakingContract"
   );
 
+  const { data:Event, isLoading:LoadEvent, error:ErrorEvent } = useContractEvents(contract, "ContractDeployed");
+ console.log(Event)
+ if (Event && Event.length > 0) {
+  const latestEvent = Event[0]; // Get the last element of the array
+  const newContract = latestEvent.data.newContract;
+  setstakingAddress(newContract)
+  console.log(newContract); // This will log the newContract of the latest event
+} else {
+  console.log("No events found");
+}
+
   const deploy = async () => {
     try {
       const data = await deployStakingContract({
@@ -52,12 +123,29 @@ const AdminHome = () => {
           ],
         overrides: {value:wei}
       });
-      
       console.info("contract call successs", data);
     } catch (err) {
       console.error("contract call failure", err);
     }
   }
+  const deployAndPostData = async () => {
+    try {
+      setLoading(true); // Set loading state to true
+      // Execute deploy function
+      await deploy();
+      // If deploy is successful, execute postData function
+      await postData();
+      // Alert successful after both deploy and postData are successful
+      alert('Successful');
+    } catch (error) {
+      // Handle errors appropriately
+      console.error("Error:", error);
+      // You might want to display an error message to the user here
+      alert('Error occurred');
+    } finally {
+      setLoading(false); // Set loading state to false after execution
+    }
+  };
 
 	return (
 		<AdminHomeStyles>
@@ -66,10 +154,9 @@ const AdminHome = () => {
 				<div className='admin-container-links'>
 					<AdminLink />
 				</div>
-
 				<div id={href}className='admin-container-form'>
 					<form>
-						<h2>ADMIN</h2>
+						<h2>Deploy NFT Staking</h2>
 						<div className='row-1'>
         <label htmlFor='name'>COLLECTION NAME</label>
         <input 
@@ -158,9 +245,37 @@ const AdminHome = () => {
           onChange={(e) => setEndDate(e.target.value)} 
         />
       </div>
-
+      <div className='row-5'>
+        <label htmlFor='website'>Website</label>
+        <input 
+          type='text' 
+          id='endDate' 
+          placeholder='Link to NFT Website' 
+          value={website} 
+          onChange={(e) => setWebsite(e.target.value)} 
+        />
+      </div>
+      <div className='row-5'>
+        <label htmlFor='Twitter'>X/Twitter</label>
+        <input 
+          type='text' 
+          id='endDate' 
+          placeholder='Link to X/Twitter' 
+          value={twitter} 
+          onChange={(e) => setTwitter(e.target.value)} 
+        />
+      </div>
+      <div>
+      <input type="file" id="imageInput" style={{ display: 'none' }} onChange={handleFileChange} />
+      <label htmlFor="imageInput" style={{ cursor: 'pointer' }}>Choose Image</label>
+      {imageChosen && <p>An image has been chosen</p>} {/* Show message if image has been chosen */}
+      <button onClick={handleUpload}>Upload</button>
+      {responseMessage && <p>Image Uploaded Successfully: {responseMessage}</p>}
+    </div>
 					</form>
-          <button onClick={deploy}>SUBMIT</button>
+          <button onClick={deployAndPostData} disabled={loading}>
+        {loading ? 'Loading...' : 'SUBMIT'}
+      </button>
 				</div>
         
 			</div>

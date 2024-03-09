@@ -11,7 +11,7 @@ import { Mumbai } from "@thirdweb-dev/chains";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
 	<React.StrictMode>
-    <ThirdwebProvider activeChain={Mumbai} clientId="your-client-id"> 
+    <ThirdwebProvider activeChain={Mumbai} clientId=""> 
 		<Router>
 			<App />
 		</Router>
