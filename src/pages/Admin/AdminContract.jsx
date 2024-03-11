@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import AdminFeeStyles from '../../assets/styles/AdminFeeStyles';
 import AdminLink from '../../components/AdminLink/AdminLink';
 import NavbarNftConnected from '../../components/Navbar/NavbarNftConnected';
+import { StakingFactory,StakingFactoryAbi,StakingFactoryNew,StakingFactoryNewAbi } from '../../../contract/contract';
+import { useAddress, useContractRead, useContract,useContractWrite,useContractEvents  } from "@thirdweb-dev/react"
 
 const AdminContract = () => {
+	const address = useAddress()
 	const [href, setHref] = useState('');
 	// Scroll page
 	useEffect(() => {
@@ -17,6 +20,15 @@ const AdminContract = () => {
 			element.scrollIntoView({ behavior: 'smooth' });
 		}
 	}, [href]);
+
+	const { contract, isLoading, error } = useContract(
+		StakingFactoryNew,
+		StakingFactoryNewAbi,
+	  );
+	  const { data:balanceOf, isLoading:balanceOfLoading, error:balanceOfError } = useContractRead(contract, "getNumberOfDeployedContractsByAddress",[address]);
+	  const { data:addressOf, isLoading:addressOfLoading, error:addressOfError } = useContractRead(contract, "getDeployedStakingContractsByAddress",[address]);
+	console.log(balanceOf)
+	console.log(addressOf)
 	return (
 		<AdminFeeStyles>
 			<NavbarNftConnected />
@@ -24,10 +36,23 @@ const AdminContract = () => {
 				<div className='admin-container-links'>
 					<AdminLink />
 				</div>
-
+				
 				<div id={href} className='admin-container-form'>
 					<form>
 						<h2>contract</h2>
+						<div>{balanceOf.toString()}</div>
+				<div>
+            <h2>Wallet Addresses:</h2>
+            {Array.isArray(addressOf) && addressOf.length > 0 ? (
+                <ul>
+                    {addressOf.map((address, index) => (
+                        <li key={index}>{address}</li>
+                    ))}
+                </ul>
+            ) : (
+                <p>No wallet addresses found</p>
+            )}
+        </div>
 
 						<div className='row-1'>
 							<div className='row-1-title'>

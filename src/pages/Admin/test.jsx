@@ -2,7 +2,7 @@ import AdminHomeStyles from '../../assets/styles/AdminHomeStyles';
 import NavbarNftConnected from '../../components/Navbar/NavbarNftConnected';
 import AdminLink from '../../components/AdminLink/AdminLink';
 import { useEffect, useState } from 'react';
-import { StakingFactory,StakingFactoryAbi,StakingFactoryNew,StakingFactoryNewAbi } from '../../../contract/contract';
+import { StakingFactory,StakingFactoryAbi } from '../../../contract/contract';
 import { useAddress, useContractRead, useContract,useContractWrite,useContractEvents  } from "@thirdweb-dev/react"
 import axios from 'axios';
 
@@ -24,7 +24,6 @@ const AdminHome = () => {
   const [twitter, setTwitter] = useState('');
   const [stakingAddress, setstakingAddress] = useState('');
   const [loading, setLoading] = useState(false);
-  const [deploymentSuccess, setDeploymentSuccess] = useState(false);
   const address = useAddress()
 console.log(address)
   const handleFileChange = (event) => {
@@ -57,48 +56,15 @@ console.log(address)
     });
   };
 
-  const deploy = async () => {
-    try {
-      const data = await deployStakingContract({
-        args: [
-          collectionName,
-          description,
-          collectionAddress,
-          rewardTokenAddress,
-          stakingFee,
-          timeUnit,
-          rewardsPerUnitTime,
-          endDate,
-          ],
-        overrides: {value:wei}
-      });
-      console.info("contract call successs", data);
-      
-      // Extract address from the first event
-      if (data && data.length > 0) {
-        const event0 = data[0];
-        const EventAddress = event0.data.address; // Assuming address is a property in the data object
-        console.log("Address from event 0:", EventAddress);
-        setstakingAddress(EventAddress)
-      } else {
-        console.log("No events found");
-      }
-      
-    } catch (err) {
-      console.error("contract call failure", err);
-    }
-  }
-
-
   const postData = async () => {
     try {
       const data = {
-        name:collectionName,
+        collectionName,
         description,
-        image:responseMessage,
+        responseMessage,
         website,
         twitter,
-        walletAddress:address,
+        address,
         stakingAddress
       };
 
@@ -109,7 +75,7 @@ console.log(address)
     }
   };
 
-  const wei ='200'
+  const wei ='1'
 	// Scroll page
 	useEffect(() => {
 		const href = window.location.href.substring(window.location.href.lastIndexOf('#') + 1);
@@ -121,8 +87,8 @@ console.log(address)
 		}
 	}, [href])
   const { contract, isLoading, error } = useContract(
-    StakingFactoryNew,
-    StakingFactoryNewAbi,
+    StakingFactory,
+    StakingFactoryAbi,
   );
   console.log(StakingFactory)
 
@@ -131,25 +97,16 @@ console.log(address)
     "deployStakingContract"
   );
 
-
-
+  const { data:Event, isLoading:LoadEvent, error:ErrorEvent } = useContractEvents(contract, "ContractDeployed");
  console.log(Event)
- useEffect(() => {
-  const fetchData = async () => {
-    if (Event && Event.length > 0) {
-      const latestEvent = Event[0]; // Get the last element of the array
-      const newContract = latestEvent.data.newContract;
-      setstakingAddress(newContract);
-      console.log(newContract); // This will log the newContract of the latest event
-    } else {
-      console.log("No events found");
-    }
-  };
-
-  fetchData(); // Call fetchData on mount and whenever deploymentSuccess changes
-
-}, [Event, deploymentSuccess]);  // Ensure that this useEffect hook runs only when Event changes
-
+ if (Event && Event.length > 0) {
+  const latestEvent = Event[0]; // Get the last element of the array
+  const newContract = latestEvent.data.newContract;
+  setstakingAddress(newContract)
+  console.log(newContract); // This will log the newContract of the latest event
+} else {
+  console.log("No events found");
+}
 
   
   const deployAndPostData = async () => {
@@ -158,9 +115,9 @@ console.log(address)
       // Execute deploy function
       await deploy();
       // If deploy is successful, execute postData function
-     // await postData();
+      await postData();
       // Alert successful after both deploy and postData are successful
-      alert('Check Contract for your Deployed Contract');
+      alert('Successful');
     } catch (error) {
       // Handle errors appropriately
       console.error("Error:", error);
@@ -269,7 +226,7 @@ console.log(address)
           onChange={(e) => setEndDate(e.target.value)} 
         />
       </div>
-      {/*<div className='row-5'>
+      <div className='row-5'>
         <label htmlFor='website'>Website</label>
         <input 
           type='text' 
@@ -289,15 +246,13 @@ console.log(address)
           onChange={(e) => setTwitter(e.target.value)} 
         />
       </div>
-      
       <div>
       <input type="file" id="imageInput" style={{ display: 'none' }} onChange={handleFileChange} />
       <label htmlFor="imageInput" style={{ cursor: 'pointer' }}>Choose Image</label>
-      {imageChosen && <p>Click Upload to Upload the Image</p>} 
+      {imageChosen && <p>An image has been chosen</p>} {/* Show message if image has been chosen */}
       <button onClick={handleUpload}>Upload</button>
       {responseMessage && <p>Image Uploaded Successfully: {responseMessage}</p>}
     </div>
-    */}
 					</form>
           <button onClick={deployAndPostData} disabled={loading}>
         {loading ? 'Loading...' : 'SUBMIT'}
